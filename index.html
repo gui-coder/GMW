@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Jobs</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body>
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <div id="mainContainer">
+        <header class="header">
+            <h1>Análise de Jobs</h1>
+        </header>
+
+        <main class="main-content">
+            <section class="upload-section card">
+                <h2>Upload de Arquivos</h2>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" multiple accept=".xlsx,.xls" />
+                    <label for="fileInput" class="file-label">Escolher Arquivos</label>
+                </div>
+                <div id="fileList" class="file-list"></div>
+            </section>
+
+            <section class="actions-section card">
+                <button id="processButton" class="button primary" disabled>Processar</button>
+                <button id="exportXLSX" class="button secondary" disabled>Exportar XLSX</button>
+                <button id="exportPDF" class="button secondary" disabled>Exportar PDF</button>
+            </section>
+
+            <section class="messages-section">
+                <div id="errorMessages" class="error-container"></div>
+                <div id="successMessages" class="success-container"></div>
+            </section>
+
+            <section class="statistics-section card">
+                <h2>Estatísticas</h2>
+                <div id="statsDisplay"></div>
+            </section>
+
+            <section class="charts-section card">
+                <h2>Gráficos</h2>
+                <div id="charts"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/errors.js"></script>
+    <script src="js/loaders.js"></script>
+    <script src="js/processors/dataProcessor.js"></script>
+    <script src="js/managers/chartManager.js"></script>
+    <script src="js/managers/exportManager.js"></script>
+    <script src="js/analyzers/jobAnalyzer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Jobs</title>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Main Container -->
+    <div id="mainContainer" class="main-container">
+        <header class="header">
+            <h1>Análise de Jobs</h1>
+        </header>
+
+        <main class="main-content">
+            <!-- File Upload Section -->
+            <section class="upload-section card">
+                <h2>Upload de Arquivos</h2>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" multiple accept=".xlsx,.xls" class="file-input" />
+                    <label for="fileInput" class="file-label">Escolher Arquivos</label>
+                </div>
+                <div id="fileList" class="file-list"></div>
+            </section>
+
+            <!-- Actions Section -->
+            <section class="actions-section card">
+                <button id="processButton" class="button primary" disabled>Processar</button>
+                <button id="exportXLSX" class="button secondary" disabled>Exportar XLSX</button>
+                <button id="exportPDF" class="button secondary" disabled>Exportar PDF</button>
+            </section>
+
+            <!-- Messages Section -->
+            <section class="messages-section">
+                <div id="errorMessages" class="error-container"></div>
+                <div id="successMessages" class="success-container"></div>
+            </section>
+
+            <!-- Statistics Section -->
+            <section class="statistics-section card">
+                <h2>Estatísticas</h2>
+                <div id="statsDisplay"></div>
+            </section>
+
+            <!-- Charts Section -->
+            <section class="charts-section card">
+                <h2>Gráficos</h2>
+                <div id="charts"></div>
+            </section>
+        </main>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+    <!-- Application Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/errors.js"></script>
+    <script src="js/loaders.js"></script>
+    <script src="js/processors/dataProcessor.js"></script>
+    <script src="js/managers/chartManager.js"></script>
+    <script src="js/managers/exportManager.js"></script>
+    <script src="js/analyzers/jobAnalyzer.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>

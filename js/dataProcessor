@@ -1,0 +1,291 @@
+/**
+ * Classe responsável pelo processamento de dados
+ */
+class DataProcessor {
+  constructor() {
+    this.reset();
+  }
+
+  /**
+   * Reseta o estado do processador
+   */
+  reset() {
+    this.rawData = [];
+    this.processedData = [];
+    this.statistics = {};
+  }
+
+  /**
+   * Processa múltiplos arquivos
+   * @param {FileList} files - Lista de arquivos para processar
+   * @returns {Promise<Array>} Dados processados
+   */
+  async processFiles(files) {
+    try {
+      this.reset();
+      const loadingId = Utils.generateUniqueId();
+      window.loadingManager.startLoading(loadingId, "Processando arquivos...");
+
+      for (const file of files) {
+        console.log(`Processando arquivo: ${file.name}`);
+        const fileData = await this.readFile(file);
+        const processedFileData = this.processFileData(fileData);
+        this.processedData = [...this.processedData, ...processedFileData];
+      }
+
+      this.calculateStatistics();
+      window.loadingManager.finishLoading(loadingId);
+      return this.processedData;
+    } catch (error) {
+      throw new ProcessingError("Erro no processamento de arquivos", error);
+    }
+  }
+
+  /**
+   * Lê arquivo Excel
+   * @param {File} file - Arquivo para ler
+   * @returns {Promise<Array>} Dados do arquivo
+   */
+  async readFile(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        try {
+          const data = new Uint8Array(event.target.result);
+          const workbook = XLSX.read(data, {
+            type: "array",
+            cellDates: true,
+            dateNF: "dd/mm/yyyy hh:mm:ss",
+          });
+
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          this.validateHeaders(firstSheet);
+
+          // Configura as opções para converter para JSON
+          const jsonOpts = {
+            range: CONFIG.EXCEL.DATA_START_ROW,
+            header: this.createHeaderArray(),
+            raw: false,
+          };
+
+          let jsonData = XLSX.utils.sheet_to_json(firstSheet, jsonOpts);
+          jsonData = this.filterRelevantColumns(jsonData);
+
+          console.log("Dados processados:", jsonData);
+          resolve(jsonData);
+        } catch (error) {
+          reject(new FileError(`Erro ao ler arquivo ${file.name}`, error));
+        }
+      };
+
+      reader.onerror = () => {
+        reject(new FileError(`Erro na leitura do arquivo ${file.name}`));
+      };
+
+      reader.readAsArrayBuffer(file);
+    });
+  }
+
+  /**
+   * Valida cabeçalhos da planilha
+   * @param {Object} sheet - Planilha do Excel
+   */
+  validateHeaders(sheet) {
+    const headerRow = CONFIG.EXCEL.HEADER_ROW;
+    const requiredHeaders = CONFIG.EXCEL.HEADERS;
+
+    for (const [column, expectedHeader] of Object.entries(
+      CONFIG.EXCEL.COLUMNS
+    )) {
+      const cellAddress = `${expectedHeader}${headerRow}`;
+      const cellValue = sheet[cellAddress]?.v;
+
+      if (
+        !cellValue ||
+        !cellValue.toString().includes(requiredHeaders[column])
+      ) {
+        throw new ValidationError(
+          `Cabeçalho não encontrado: ${requiredHeaders[column]} em ${cellAddress}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Cria array de cabeçalhos para conversão
+   * @returns {Array<string>} Array de cabeçalhos
+   */
+  createHeaderArray() {
+    const headerArray = [];
+    let currentColumn = "A";
+
+    while (currentColumn <= "Z") {
+      switch (currentColumn) {
+        case CONFIG.EXCEL.COLUMNS.JOB_NAME:
+          headerArray.push("jobName");
+          break;
+        case CONFIG.EXCEL.COLUMNS.AGENT_NAME:
+          headerArray.push("agentName");
+          break;
+        case CONFIG.EXCEL.COLUMNS.START_DATETIME:
+          headerArray.push("startDateTime");
+          break;
+        case CONFIG.EXCEL.COLUMNS.END_DATETIME:
+          headerArray.push("endDateTime");
+          break;
+        default:
+          headerArray.push(`blank${headerArray.length}`);
+      }
+      currentColumn = String.fromCharCode(currentColumn.charCodeAt(0) + 1);
+    }
+
+    return headerArray;
+  }
+
+  /**
+   * Filtra apenas as colunas relevantes
+   * @param {Array<Object>} data - Dados brutos
+   * @returns {Array<Object>} Dados filtrados
+   */
+  filterRelevantColumns(data) {
+    return data.map((row) => ({
+      jobName: row.jobName,
+      agentName: row.agentName,
+      startDateTime: row.startDateTime,
+      endDateTime: row.endDateTime,
+    }));
+  }
+
+  /**
+   * Processa dados de um arquivo
+   * @param {Array<Object>} data - Dados para processar
+   * @returns {Array<Object>} Dados processados
+   */
+  processFileData(data) {
+    if (!data || !data.length) {
+      throw new DataError("Arquivo vazio ou sem dados válidos");
+    }
+
+    return data
+      .map((row) => this.processRow(row))
+      .filter((row) => row !== null);
+  }
+
+  /**
+   * Processa uma linha de dados
+   * @param {Object} row - Linha para processar
+   * @returns {Object|null} Linha processada ou null se inválida
+   */
+  processRow(row) {
+    try {
+      const startDate = this.parseDateTime(row.startDateTime);
+      const endDate = this.parseDateTime(row.endDateTime);
+
+      if (!startDate || !endDate) {
+        console.warn("Data inválida:", {
+          start: row.startDateTime,
+          end: row.endDateTime,
+        });
+        return null;
+      }
+
+      const duration = (endDate - startDate) / (1000 * 60); // Convertendo para minutos
+
+      if (isNaN(duration) || duration < 0) {
+        console.warn("Duração inválida:", duration);
+        return null;
+      }
+
+      return {
+        jobName: String(row.jobName || "").trim(),
+        agentName: String(row.agentName || "").trim(),
+        startDateTime: startDate,
+        endDateTime: endDate,
+        duration: duration,
+      };
+    } catch (error) {
+      console.warn("Erro ao processar linha:", error, row);
+      return null;
+    }
+  }
+
+  /**
+   * Converte string para objeto Date
+   * @param {string} value - Valor para converter
+   * @returns {Date|null} Data convertida ou null se inválida
+   */
+  parseDateTime(value) {
+    if (!value) return null;
+
+    if (value instanceof Date && !isNaN(value)) {
+      return value;
+    }
+
+    const strValue = String(value)
+      .trim()
+      .replace(/,/g, "")
+      .replace(/\s+/g, " ");
+
+    const formats = [
+      // ISO
+      () => new Date(strValue),
+      // dd/mm/yyyy hh:mm:ss
+      () => {
+        const [datePart, timePart] = strValue.split(" ");
+        if (!datePart) return null;
+
+        const [day, month, year] = datePart.split("/");
+        if (timePart) {
+          return new Date(`${year}-${month}-${day} ${timePart}`);
+        }
+        return new Date(`${year}-${month}-${day}`);
+      },
+      // mm/dd/yyyy hh:mm:ss
+      () => new Date(strValue.replace(/(\d{2})\/(\d{2})\/(\d{4})/, "$3-$1-$2")),
+    ];
+
+    for (const format of formats) {
+      try {
+        const date = format();
+        if (date instanceof Date && !isNaN(date)) {
+          return date;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+
+    console.warn("Não foi possível converter a data:", value);
+    return null;
+  }
+
+  /**
+   * Calcula estatísticas dos dados processados
+   */
+  calculateStatistics() {
+    const jobGroups = Utils.groupBy(this.processedData, "jobName");
+
+    this.statistics = Object.entries(jobGroups).reduce(
+      (stats, [jobName, jobs]) => {
+        const durations = jobs.map((job) => job.duration);
+        const basicStats = Utils.calculateStats(durations);
+
+        stats[jobName] = {
+          ...basicStats,
+          totalExecutions: jobs.length,
+          uniqueAgents: new Set(jobs.map((job) => job.agentName)).size,
+          averageDuration: Utils.formatDuration(basicStats.mean),
+          minDuration: Utils.formatDuration(basicStats.min),
+          maxDuration: Utils.formatDuration(basicStats.max),
+        };
+
+        return stats;
+      },
+      {}
+    );
+  }
+}
+
+// Exporta a classe para uso global
+window.DataProcessor = DataProcessor;
